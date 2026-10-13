@@ -1,0 +1,236 @@
+{
+  "name": "point",
+  "description": "Use this to find one spot in an image, such as \"the yellow package closest to the robot arm\" or \"the empty slot on the second shelf\". Returns `x` and `y` from the image's top-left corner (`x` to the right, `y` down), `present`, `confidence` (that the point lies on the thing), and the `image` looked in with its `width` and `height`, with the call's `cost` in USD. Costs one request. `present` is the probability that the thing is in the image at all and `confidence` the probability that the place is right if it is: act on the answer when both are high, and hand the image to a person when either is low. Needs at least one image; with two or more, `image` names the one to look in by its id (a reference by number, \"Picture 2\", goes in the instructions). `model` is optional: leave it out for the default model, or pass `decisionnode-flash` for the faster, lower-cost tier.",
+  "annotations": {
+    "title": "Point",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  },
+  "inputSchema": {
+    "properties": {
+      "instructions": {
+        "description": "What to find, such as \"the yellow package closest to the robot arm\".",
+        "title": "Instructions"
+      },
+      "images": {
+        "description": "The images, at least one: the one to look in, and any others the instructions refer to. Up to 16 images every question can see, within the model's token limit, each with a short, meaningful id (`receipt`, not `2`). The instructions refer to an image by its id in backticks (recommended) or by its number from 1 in this order (\"image 2\", \"Picture 2\"). Each is {id, url} with an https URL, {id, data, media_type} with base64 data, or, on the local server only, {id, path} for a file on the user's machine. On the hosted server the base64 data of one call is limited to about 3 MiB in total; send larger images by https url.",
+        "items": {
+          "description": "An image beside the state.",
+          "properties": {
+            "id": {
+              "description": "Unique within the request; a short, meaningful name (`receipt`, not `2`). The model sees the image as `Picture <n> (<id>):`, so the instructions can refer to it by this id in backticks (recommended) or by its number.",
+              "type": "string"
+            },
+            "url": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "An https URL the API fetches."
+            },
+            "data": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "The image bytes, base64-encoded."
+            },
+            "media_type": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "image/jpeg",
+                    "image/png",
+                    "image/webp"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "The type of `data`."
+            },
+            "path": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "A file on the user's machine. Local server only; the hosted server refuses it."
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "minItems": 1,
+        "type": "array"
+      },
+      "image": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "The id of the image to look in (a string). Needed with two or more images; with one, that one. A reference by number (\"Picture 2\") goes in the instructions."
+      },
+      "units": {
+        "anyOf": [
+          {
+            "enum": [
+              "pixels",
+              "normalized"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "pixels (the default): pixels of the image as sent. normalized: fractions of the width and the height, from 0 to 1."
+      },
+      "state": {
+        "default": null,
+        "description": "What to judge: a string, or any JSON value (an object with named fields works well). The model sees only this, the question and any images. Leave it out for a question that stands on its own.",
+        "title": "State"
+      },
+      "model": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "The model id. Leave it out for the default, `decisionnode-moe`; `decisionnode-flash` is the faster, lower-cost tier. The `models` tool lists the ids your key may use."
+      }
+    },
+    "required": [
+      "instructions",
+      "images"
+    ],
+    "type": "object"
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "x": {
+        "type": "number",
+        "description": "From the left edge: whole pixels, or a fraction of the width with normalized units."
+      },
+      "y": {
+        "type": "number",
+        "description": "From the top edge: whole pixels, or a fraction of the height with normalized units."
+      },
+      "confidence": {
+        "type": "number",
+        "description": "The probability that the point lies on the thing, if it is there."
+      },
+      "present": {
+        "type": "number",
+        "description": "The probability that what the instructions describe is in the image at all. Under a low `present` the place is only a best guess for something probably not there."
+      },
+      "image": {
+        "type": "string",
+        "description": "The id of the image looked in."
+      },
+      "width": {
+        "type": "integer",
+        "description": "The image's width in pixels."
+      },
+      "height": {
+        "type": "integer",
+        "description": "The image's height in pixels."
+      },
+      "cost": {
+        "type": "object",
+        "description": "What the call cost, as the API booked it, in USD: `usd` (the amount booked), split into `model_usd` and `boosters_usd`, and `free_tier` (true when the free tier covered the model's part).",
+        "properties": {
+          "usd": {
+            "type": "number"
+          },
+          "model_usd": {
+            "type": "number"
+          },
+          "boosters_usd": {
+            "type": "number"
+          },
+          "free_tier": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      },
+      "safety": {
+        "type": "object",
+        "description": "Present only when the safety check flagged a category for this key: each category's probability and the `flagged` categories.",
+        "properties": {
+          "checked": {
+            "type": "boolean"
+          },
+          "harm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "self_harm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "flagged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "required": [
+      "x",
+      "y",
+      "present",
+      "confidence",
+      "image",
+      "width",
+      "height"
+    ],
+    "additionalProperties": true
+  }
+}

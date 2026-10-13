@@ -1,0 +1,18 @@
+{
+  "isError": false,
+  "structuredContent": {
+    "answers": {
+      "pick": {
+        "type": "choice",
+        "choice": "",
+        "confidence": 0.4,
+        "probabilities": {
+          "": 0.7,
+          "other": 0.3
+        }
+      }
+    },
+    "model": "decisionnode-moe-0.9.0-rc1",
+    "input_tokens": 12
+  }
+}

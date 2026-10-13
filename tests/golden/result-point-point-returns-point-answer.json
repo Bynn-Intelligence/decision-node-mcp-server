@@ -1,0 +1,12 @@
+{
+  "isError": false,
+  "structuredContent": {
+    "x": 812,
+    "y": 455,
+    "present": 0.97,
+    "confidence": 0.91,
+    "image": "belt",
+    "width": 1920,
+    "height": 1080
+  }
+}

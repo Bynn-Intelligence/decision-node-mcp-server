@@ -1,0 +1,12 @@
+{
+  "isError": false,
+  "structuredContent": {
+    "choice": "billing",
+    "confidence": 0.73,
+    "probabilities": {
+      "account": 0.12,
+      "billing": 0.8200000000000001,
+      "bug": 0.060000000000000005
+    }
+  }
+}

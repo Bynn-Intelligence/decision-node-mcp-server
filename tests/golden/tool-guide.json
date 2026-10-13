@@ -1,0 +1,28 @@
+{
+  "name": "guide",
+  "description": "Use this once before your first DecisionNode question, to learn which tool and question type to pick, how to write the state and the question, and how to read a probability and a confidence. Returns the guide as text. Costs nothing: it makes no API call.",
+  "annotations": {
+    "title": "Guide",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  },
+  "inputSchema": {
+    "properties": {},
+    "type": "object"
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "guide": {
+        "type": "string",
+        "description": "The guide, in Markdown."
+      }
+    },
+    "required": [
+      "guide"
+    ],
+    "additionalProperties": false
+  }
+}

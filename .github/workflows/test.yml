@@ -1,0 +1,65 @@
+---
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: pytest (Python ${{ matrix.python }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.13"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # The tests run against the mock API server of the public SDK conformance suite,
+      # checked out at a pinned commit (suite 1.13). Bump this commit to move to a newer
+      # suite.
+      - name: Check out the conformance suite
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: Bynn-Intelligence/decision-node-conformance
+          ref: ede3f8b03d85111ca61085df5aa7a306ab5ec943
+          path: _deps/decision-node-conformance
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install
+        run: uv sync
+
+      # The video tools read frames with ffmpeg and ffprobe; without them the
+      # video tests skip.
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg
+
+      - name: Test
+        run: uv run pytest -q
+        env:
+          DECISIONNODE_CONFORMANCE_DIR: ${{ github.workspace }}/_deps/decision-node-conformance
+
+
+  # The check that runs before every release, tested with invented words; it
+  # needs no secret.
+  name-check:
+    name: Release name check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Test the release name check
+        run: python3 .github/scripts/test_check_names.py

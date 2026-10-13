@@ -1,0 +1,19 @@
+{
+  "isError": true,
+  "structuredContent": {
+    "error_type": "refusal_error",
+    "message": "This request was refused under the usage policy: it asks for help to harm oneself. If someone is in danger, contact local emergency services or a crisis line.",
+    "reason": null,
+    "status": 403,
+    "request_id": "req_err_0001",
+    "category": "self_harm",
+    "safety": {
+      "checked": true,
+      "harm": 0.011,
+      "self_harm": 0.951,
+      "flagged": [
+        "self_harm"
+      ]
+    }
+  }
+}

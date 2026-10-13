@@ -1,0 +1,133 @@
+# Runs only while the repository is public: nothing is bumped, tagged or
+# published while it is private. The built files are checked for names that
+# must not ship before anything is pushed or published, and so are the commit
+# messages since the last tag. The internal-name list is the
+# DN_NAME_CHECK_WORDS organisation secret; without it the check fails and
+# nothing is released.
+#
+# Auto-release bynn-decisionnode-mcp on every push to main: bump the patch in
+# pyproject.toml, __init__.py and uv.lock, run the tests, build, publish to
+# PyPI, push the bump commit and tag back to main, and cut the GitHub release.
+# The push back uses the default GITHUB_TOKEN, which does not retrigger this
+# workflow, and the bump commit carries [skip publish] as a second guard.
+#
+# To ship without cutting a release (docs, CI tweaks), put [skip publish] in
+# the commit message.
+#
+# PyPI refuses a dependency given as a direct reference (@ git+...), so the job
+# stops while pyproject.toml has one. The package depends on bynn-decisionnode,
+# so nothing is released until a version of it that the dependency accepts is
+# on PyPI: a release would not install otherwise.
+#
+# Publishes via PyPI OIDC trusted publishing bound to the pypi-publish
+# environment: no PYPI_API_TOKEN, no stored credential. The publish action
+# mints PEP 740 digital attestations (Sigstore) by default on the trusted-
+# publishing path and uploads them beside the release. Requires this repo +
+# workflow + environment registered as a trusted publisher on pypi.org.
+name: Publish to PyPI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+permissions: read-all
+
+env:
+  # The conformance suite commit the tests run against, as in test.yml.
+  CONFORMANCE_REF: ede3f8b03d85111ca61085df5aa7a306ab5ec943
+
+jobs:
+  publish:
+    if: "github.event.repository.visibility == 'public' && !contains(github.event.head_commit.message, '[skip publish]')"
+    runs-on: ubuntu-latest
+    environment: pypi-publish
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: Bynn-Intelligence/decision-node-conformance
+          ref: ${{ env.CONFORMANCE_REF }}
+          path: _deps/decision-node-conformance
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          python-version: '3.12'
+
+      # PyPI refuses a dependency given as a direct reference (name @ git+...).
+      - name: No direct-reference dependency
+        run: |
+          python3 - <<'EOF'
+          import re, sys, tomllib
+          deps = tomllib.load(open("pyproject.toml", "rb"))["project"]["dependencies"]
+          direct = [d for d in deps if re.search(r"@\s*\S+://|@\s*git\+", d)]
+          if direct:
+              print("::error::pyproject.toml has a direct-reference dependency, which PyPI refuses: %s. Pin a released version instead; nothing is released" % ", ".join(direct))
+              sys.exit(1)
+          EOF
+
+      - name: The SDK is on PyPI
+        run: |
+          python3 - <<'EOF'
+          import json, re, sys, tomllib, urllib.request
+          deps = tomllib.load(open("pyproject.toml", "rb"))["project"]["dependencies"]
+          spec = next(d for d in deps if re.match(r"bynn-decisionnode\b(?!-)", d))
+          floor = tuple(int(x) for x in re.search(r">=\s*([0-9.]+)", spec).group(1).split("."))
+          try:
+              with urllib.request.urlopen("https://pypi.org/pypi/bynn-decisionnode/json", timeout=30) as r:
+                  releases = json.load(r)["releases"]
+          except Exception:
+              releases = {}
+          ok = [v for v, files in releases.items()
+                if files and re.fullmatch(r"[0-9]+(\.[0-9]+)*", v) and tuple(int(x) for x in v.split(".")) >= floor]
+          if not ok:
+              print("::error::no release of bynn-decisionnode on PyPI satisfies %s; nothing is released" % spec)
+              sys.exit(1)
+          print("bynn-decisionnode on PyPI: %s" % ", ".join(sorted(ok)))
+          EOF
+
+      - id: bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          CURRENT=$(grep -m1 '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          NEW="${CURRENT%.*}.$(( ${CURRENT##*.} + 1 ))"
+          sed -i "s/^version = \"${CURRENT}\"/version = \"${NEW}\"/" pyproject.toml
+          sed -i "s/__version__ = \"${CURRENT}\"/__version__ = \"${NEW}\"/" src/decisionnode_mcp/__init__.py
+          sed -i "/^name = \"bynn-decisionnode-mcp\"$/{n;s/^version = \"${CURRENT}\"$/version = \"${NEW}\"/}" uv.lock
+          echo "version=${NEW}" >> "$GITHUB_OUTPUT"
+
+      - run: uv sync --locked
+      - run: uv run --locked pytest -q
+        env:
+          DECISIONNODE_CONFORMANCE_DIR: ${{ github.workspace }}/_deps/decision-node-conformance
+
+      - run: uv build
+      - run: python3 .github/scripts/check_names.py --commits dist/
+        env:
+          DN_NAME_CHECK_WORDS: ${{ secrets.DN_NAME_CHECK_WORDS }}
+
+      - run: |
+          git add pyproject.toml src/decisionnode_mcp/__init__.py uv.lock
+          git commit -m "Release v${{ steps.bump.outputs.version }} [skip publish]"
+          git tag "v${{ steps.bump.outputs.version }}"
+          git push origin HEAD:main "v${{ steps.bump.outputs.version }}"
+
+      # No password: OIDC trusted publishing. With id-token: write present and
+      # this repo registered as a trusted publisher, the action authenticates
+      # by OIDC and generates PEP 740 attestations (attestations: true is the
+      # default): a Sigstore signature over each artifact, shown on pypi.org.
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+
+      - run: gh release create "v${{ steps.bump.outputs.version }}" --title "v${{ steps.bump.outputs.version }}" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -1,0 +1,53 @@
+{
+  "name": "models",
+  "description": "Use this to see which DecisionNode models your key may use and their published limits (tokens per request, options, levels, images). Returns `models`, the list of model entries. Costs nothing.",
+  "annotations": {
+    "title": "Models",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  },
+  "inputSchema": {
+    "properties": {},
+    "type": "object"
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "models": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The id to pass as `model`."
+            },
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "release_date": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": true
+        },
+        "description": "Each model with the limits it publishes as extra fields."
+      }
+    },
+    "required": [
+      "models"
+    ],
+    "additionalProperties": true
+  }
+}

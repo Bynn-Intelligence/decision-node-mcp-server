@@ -1,0 +1,52 @@
+{
+  "isError": false,
+  "structuredContent": {
+    "results": {
+      "a": {
+        "answers": {
+          "q": {
+            "type": "truth",
+            "truth": 0.1
+          }
+        },
+        "model": "decisionnode-moe-0.9.0-rc1"
+      },
+      "b": {
+        "error": {
+          "error_type": "validation_error",
+          "message": "body.questions.urgency.score.criteria: Field required",
+          "reason": null,
+          "status": 422,
+          "request_id": "<request id>",
+          "entries": [
+            {
+              "type": "missing",
+              "loc": [
+                "body",
+                "questions",
+                "urgency",
+                "score",
+                "criteria"
+              ],
+              "msg": "Field required",
+              "input": {
+                "type": "score",
+                "instructions": "How urgent?"
+              }
+            }
+          ]
+        }
+      },
+      "c": {
+        "answers": {
+          "q": {
+            "type": "truth",
+            "truth": 0.3
+          }
+        },
+        "model": "decisionnode-moe-0.9.0-rc1"
+      }
+    },
+    "input_tokens": 10
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "isError": false,
+  "structuredContent": {
+    "answers": {
+      "route": {
+        "type": "choice",
+        "choice": "billing",
+        "confidence": 0.81,
+        "probabilities": {
+          "account": 0.05,
+          "billing": 0.87,
+          "bug": 0.08
+        }
+      },
+      "urgency": {
+        "type": "score",
+        "score": 2.31,
+        "confidence": 0.31,
+        "legend": {
+          "0": "routine",
+          "1": "today",
+          "2": "urgent",
+          "3": "critical"
+        },
+        "probabilities": {
+          "0": 0.01,
+          "1": 0.09,
+          "2": 0.48,
+          "3": 0.42
+        }
+      },
+      "escalate": {
+        "type": "truth",
+        "truth": 0.94
+      }
+    },
+    "model": "decisionnode-moe-0.9.0-rc1",
+    "input_tokens": 62
+  }
+}

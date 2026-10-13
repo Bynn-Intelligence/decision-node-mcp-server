@@ -1,0 +1,13 @@
+{
+  "isError": false,
+  "structuredContent": {
+    "number": 7,
+    "expected": 7.3,
+    "confidence": 0.62,
+    "probabilities": {
+      "6": 0.21,
+      "7": 0.62,
+      "8": 0.14
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "isError": false,
+  "structuredContent": {
+    "answers": {
+      "known": {
+        "type": "truth",
+        "truth": 0.62
+      },
+      "future": {
+        "type": "ranking",
+        "order": [
+          "b",
+          "a"
+        ],
+        "confidence": 0.5
+      }
+    },
+    "model": "decisionnode-moe-0.9.0-rc1",
+    "input_tokens": 18
+  }
+}

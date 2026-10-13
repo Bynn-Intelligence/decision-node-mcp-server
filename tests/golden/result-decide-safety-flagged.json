@@ -1,0 +1,21 @@
+{
+  "isError": false,
+  "structuredContent": {
+    "answers": {
+      "q": {
+        "type": "truth",
+        "truth": 0.12
+      }
+    },
+    "model": "decisionnode-moe-0.9.0-rc1",
+    "input_tokens": 9,
+    "safety": {
+      "checked": true,
+      "harm": 0.912,
+      "self_harm": 0.004,
+      "flagged": [
+        "harm"
+      ]
+    }
+  }
+}

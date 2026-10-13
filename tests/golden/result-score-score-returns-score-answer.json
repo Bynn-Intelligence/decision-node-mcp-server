@@ -1,0 +1,19 @@
+{
+  "isError": false,
+  "structuredContent": {
+    "score": 2.31,
+    "confidence": 0.31,
+    "legend": {
+      "0": "routine",
+      "1": "today",
+      "2": "urgent",
+      "3": "critical"
+    },
+    "probabilities": {
+      "0": 0.01,
+      "1": 0.09,
+      "2": 0.48,
+      "3": 0.42
+    }
+  }
+}

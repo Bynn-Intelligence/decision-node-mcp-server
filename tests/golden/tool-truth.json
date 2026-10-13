@@ -1,0 +1,194 @@
+{
+  "name": "truth",
+  "description": "Use this to ask one yes-or-no question about a state, such as \"is this claim supported by the source\" or \"does this message ask for a refund\". Returns `truth`, the probability from 0 to 1 that the answer is yes, with the call's `cost` in USD. Costs one request. `model` is optional: leave it out for the default model, or pass `decisionnode-flash` for the faster, lower-cost tier.",
+  "annotations": {
+    "title": "Truth",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  },
+  "inputSchema": {
+    "properties": {
+      "instructions": {
+        "description": "The question or statement to judge, such as \"Does the source support the claim?\".",
+        "title": "Instructions"
+      },
+      "state": {
+        "default": null,
+        "description": "What to judge: a string, or any JSON value (an object with named fields works well). The model sees only this, the question and any images. Leave it out for a question that stands on its own.",
+        "title": "State"
+      },
+      "if_true": {
+        "default": null,
+        "description": "What a yes means (optional).",
+        "title": "If True"
+      },
+      "if_false": {
+        "default": null,
+        "description": "What a no means (optional).",
+        "title": "If False"
+      },
+      "images": {
+        "anyOf": [
+          {
+            "items": {
+              "description": "An image beside the state.",
+              "properties": {
+                "id": {
+                  "description": "Unique within the request; a short, meaningful name (`receipt`, not `2`). The model sees the image as `Picture <n> (<id>):`, so the instructions can refer to it by this id in backticks (recommended) or by its number.",
+                  "type": "string"
+                },
+                "url": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "An https URL the API fetches."
+                },
+                "data": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "The image bytes, base64-encoded."
+                },
+                "media_type": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "image/jpeg",
+                        "image/png",
+                        "image/webp"
+                      ],
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "The type of `data`."
+                },
+                "path": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "A file on the user's machine. Local server only; the hosted server refuses it."
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Up to 16 images every question can see, within the model's token limit, each with a short, meaningful id (`receipt`, not `2`). The instructions refer to an image by its id in backticks (recommended) or by its number from 1 in this order (\"image 2\", \"Picture 2\"). Each is {id, url} with an https URL, {id, data, media_type} with base64 data, or, on the local server only, {id, path} for a file on the user's machine. On the hosted server the base64 data of one call is limited to about 3 MiB in total; send larger images by https url."
+      },
+      "model": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "The model id. Leave it out for the default, `decisionnode-moe`; `decisionnode-flash` is the faster, lower-cost tier. The `models` tool lists the ids your key may use."
+      }
+    },
+    "required": [
+      "instructions"
+    ],
+    "type": "object"
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "truth": {
+        "type": "number",
+        "description": "The probability that the answer is yes, 0 to 1."
+      },
+      "cost": {
+        "type": "object",
+        "description": "What the call cost, as the API booked it, in USD: `usd` (the amount booked), split into `model_usd` and `boosters_usd`, and `free_tier` (true when the free tier covered the model's part).",
+        "properties": {
+          "usd": {
+            "type": "number"
+          },
+          "model_usd": {
+            "type": "number"
+          },
+          "boosters_usd": {
+            "type": "number"
+          },
+          "free_tier": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      },
+      "safety": {
+        "type": "object",
+        "description": "Present only when the safety check flagged a category for this key: each category's probability and the `flagged` categories.",
+        "properties": {
+          "checked": {
+            "type": "boolean"
+          },
+          "harm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "self_harm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "flagged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "required": [
+      "truth"
+    ],
+    "additionalProperties": true
+  }
+}

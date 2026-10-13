@@ -1,0 +1,29 @@
+{
+  "isError": false,
+  "structuredContent": {
+    "answers": {
+      "fall": {
+        "type": "truth",
+        "truth": 0.04
+      },
+      "cars": {
+        "type": "number",
+        "number": 12,
+        "expected": 12.4,
+        "confidence": 0.41,
+        "probabilities": {
+          "11": 0.22,
+          "12": 0.41,
+          "13": 0.27
+        }
+      }
+    },
+    "model": "decisionnode-moe-0.9.0-rc1",
+    "input_tokens": 1342,
+    "video_frames": 2,
+    "video_seconds": 1.0,
+    "warnings": [
+      "Video 'gate' was read at 2 frames a second."
+    ]
+  }
+}

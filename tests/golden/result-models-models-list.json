@@ -1,0 +1,30 @@
+{
+  "isError": false,
+  "structuredContent": {
+    "models": [
+      {
+        "name": "decisionnode-moe-0.9.0-rc1",
+        "description": "DecisionNode MoE, the main model.",
+        "release_date": "2026-10-01",
+        "max_input_tokens": 32768,
+        "max_choice_options": 255,
+        "max_score_levels": 10,
+        "max_images": 4
+      },
+      {
+        "name": "decisionnode-flash-0.9.0-rc1",
+        "description": "DecisionNode Flash, the fast and lower-cost model.",
+        "release_date": "2026-10-01",
+        "max_input_tokens": 8192,
+        "max_choice_options": 255,
+        "max_score_levels": 10,
+        "max_images": 4
+      },
+      {
+        "name": "decisionnode-moe",
+        "description": "The latest DecisionNode model.",
+        "release_date": "2026-10-01"
+      }
+    ]
+  }
+}

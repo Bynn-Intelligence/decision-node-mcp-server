@@ -1,0 +1,32 @@
+{
+  "isError": false,
+  "structuredContent": {
+    "answers": {
+      "risk": {
+        "type": "score",
+        "score": 0.4,
+        "confidence": 0.7,
+        "legend": {
+          "0": {
+            "what": "no risk",
+            "examples": [
+              "reading a file"
+            ]
+          },
+          "1": [
+            "high",
+            "risk"
+          ],
+          "2": "critical"
+        },
+        "probabilities": {
+          "0": 0.7,
+          "1": 0.2,
+          "2": 0.1
+        }
+      }
+    },
+    "model": "decisionnode-moe-0.9.0-rc1",
+    "input_tokens": 30
+  }
+}

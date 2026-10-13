@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bynn-decisionnode-mcp"
+version = "0.1.0"
+description = "The DecisionNode MCP server: calibrated yes-or-no, choice, scale, number, point and box judgments as tools for AI agents."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Bynn Intelligence, Inc." }]
+keywords = ["decisionnode", "mcp", "model-context-protocol", "agents", "classification"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+  # Keep the <3 cap: FastMCP 3.x changed APIs this server relies on.
+  "fastmcp>=2.9.0,<3",
+  "bynn-decisionnode>=0.3.0",
+]
+
+[project.urls]
+Homepage = "https://decisionnode.com"
+Repository = "https://github.com/Bynn-Intelligence/decision-node-mcp-server"
+
+[project.scripts]
+bynn-decisionnode-mcp = "decisionnode_mcp.main:main"
+
+# Until bynn-decisionnode is on PyPI, uv installs it from its public repository at a
+# pinned commit.
+[tool.uv.sources]
+bynn-decisionnode = { git = "https://github.com/Bynn-Intelligence/decision-node-python", rev = "caf9a894d03eb6d7ed460ccfb48399e88fde3ae4" }
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3,<9",
+  "pytest-asyncio>=0.24,<2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/decisionnode_mcp"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/decisionnode_mcp", "README.md", "LICENSE"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]

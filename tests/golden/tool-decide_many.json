@@ -1,0 +1,373 @@
+{
+  "name": "decide_many",
+  "description": "Use this to ask the same questions about many states (1 to 50 items), such as \"which of these twenty messages asks for a refund\". Returns `results` by item id, each with its `answers` and `cost`, or its `error` (one item's failure does not fail the others), and the total `input_tokens`. Costs one request per item. Each item may carry its own `images`, such as one photo per item for a point or a box. `model` is optional: leave it out for the default model, or pass `decisionnode-flash` for the faster, lower-cost tier.",
+  "annotations": {
+    "title": "Decide many",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  },
+  "inputSchema": {
+    "properties": {
+      "items": {
+        "description": "The states to judge, 1 to 50, each {id, state} and, when its questions look at images, its `images`.",
+        "items": {
+          "description": "One state of a `decide_many` call.",
+          "properties": {
+            "id": {
+              "description": "Your id for this item; its result comes back under it.",
+              "type": "string"
+            },
+            "state": {
+              "default": null,
+              "description": "What to judge: a string, or any JSON value (an object with named fields works well). The model sees only this, the question and any images. Leave it out for a question that stands on its own.",
+              "title": "State"
+            },
+            "images": {
+              "anyOf": [
+                {
+                  "items": {
+                    "description": "An image beside the state.",
+                    "properties": {
+                      "id": {
+                        "description": "Unique within the request; a short, meaningful name (`receipt`, not `2`). The model sees the image as `Picture <n> (<id>):`, so the instructions can refer to it by this id in backticks (recommended) or by its number.",
+                        "type": "string"
+                      },
+                      "url": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "default": null,
+                        "description": "An https URL the API fetches."
+                      },
+                      "data": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "default": null,
+                        "description": "The image bytes, base64-encoded."
+                      },
+                      "media_type": {
+                        "anyOf": [
+                          {
+                            "enum": [
+                              "image/jpeg",
+                              "image/png",
+                              "image/webp"
+                            ],
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "default": null,
+                        "description": "The type of `data`."
+                      },
+                      "path": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "default": null,
+                        "description": "A file on the user's machine. Local server only; the hosted server refuses it."
+                      }
+                    },
+                    "required": [
+                      "id"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "This item's images, as `images` of the other tools: up to 16. A point or box question needs at least one. On the hosted server the base64 data of every item's images together is limited to about 3 MiB."
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "maxItems": 50,
+        "minItems": 1,
+        "type": "array"
+      },
+      "questions": {
+        "additionalProperties": {
+          "additionalProperties": true,
+          "description": "One question, exactly in the API's form.",
+          "properties": {
+            "type": {
+              "description": "The question type.",
+              "enum": [
+                "truth",
+                "choice",
+                "score",
+                "number",
+                "point",
+                "box"
+              ],
+              "type": "string"
+            },
+            "instructions": {
+              "default": null,
+              "description": "The question or statement: a string, or a JSON value holding it.",
+              "title": "Instructions"
+            },
+            "criteria": {
+              "default": null,
+              "description": "truth: {\"true\": ..., \"false\": ...}, what a yes and a no mean (optional). choice: an object of option name to description (null when the name says enough), 1 to 255 options. score: the list of levels, lowest first, 1 to 10. number, point and box: not used.",
+              "title": "Criteria"
+            },
+            "min": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "number only: the lowest possible answer (default 0)."
+            },
+            "max": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "number: the highest possible answer (default 255). point and box: the most places to answer, an integer from 2 to 16; the answer then lists every match, up to that many."
+            },
+            "step": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "number only: the grid of possible answers, 1 for whole numbers (the default), 0.5 for halves."
+            },
+            "image": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "point and box only: the id of the image to look in (a string), needed when the request has two or more images. A reference by number (\"Picture 2\") goes in the instructions."
+            },
+            "units": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pixels",
+                    "normalized"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "point and box only: pixels (the default): pixels of the image as sent. normalized: fractions of the width and the height, from 0 to 1."
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        "description": "Question id to question, exactly as the API takes it: {type, instructions, criteria}; for a number {type, instructions, min, max, step}; for a point or a box {type, instructions, image, units}, which needs at least one image. Ids are yours and come back as the answer keys.",
+        "minProperties": 1,
+        "type": "object"
+      },
+      "model": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "The model id. Leave it out for the default, `decisionnode-moe`; `decisionnode-flash` is the faster, lower-cost tier. The `models` tool lists the ids your key may use."
+      }
+    },
+    "required": [
+      "items",
+      "questions"
+    ],
+    "type": "object"
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "results": {
+        "type": "object",
+        "description": "Results by item id: `answers` (with `model`), or `error` when that item failed.",
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "answers": {
+              "type": "object",
+              "description": "Answers by question id. Each has `type` and that type's fields: `truth`; `choice`, `confidence`, `probabilities`; `score`, `confidence`, `legend`, `probabilities`; `number`, `expected`, `confidence`, `probabilities`; or, for a point or a box, `x` and `y` or `x1`, `y1`, `x2`, `y2`, with `present`, `confidence`, `image`, `width`, `height`. A point or box asked with `max` answers `count`, `present`, `complete` (the probability that nothing was left out) and `points` or `boxes`, each with its own `confidence`, left to right, then `image`, `width` and `height`.",
+              "additionalProperties": {
+                "type": "object"
+              }
+            },
+            "model": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cost": {
+              "type": "object",
+              "description": "What the call cost, as the API booked it, in USD: `usd` (the amount booked), split into `model_usd` and `boosters_usd`, and `free_tier` (true when the free tier covered the model's part).",
+              "properties": {
+                "usd": {
+                  "type": "number"
+                },
+                "model_usd": {
+                  "type": "number"
+                },
+                "boosters_usd": {
+                  "type": "number"
+                },
+                "free_tier": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true
+            },
+            "safety": {
+              "type": "object",
+              "description": "Present only when the safety check flagged a category for this key: each category's probability and the `flagged` categories.",
+              "properties": {
+                "checked": {
+                  "type": "boolean"
+                },
+                "harm": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "self_harm": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "flagged": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": true
+            },
+            "error": {
+              "type": "object",
+              "properties": {
+                "error_type": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "request_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "error_type",
+                "message"
+              ],
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "input_tokens": {
+        "type": "integer",
+        "description": "The tokens of the items that were answered, in all."
+      }
+    },
+    "required": [
+      "results",
+      "input_tokens"
+    ],
+    "additionalProperties": true
+  }
+}
