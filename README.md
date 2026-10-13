@@ -1,5 +1,7 @@
 # DecisionNode MCP server
 
+[DecisionNode](https://decisionnode.com) is a decision engine: send it text, JSON or images with a question, and it answers with calibrated probabilities.
+
 DecisionNode's judgments as tools for AI agents. An agent asks a narrow question about a
 piece of content (is this claim supported, which team should take this ticket, how urgent
 is it, how many line items does the invoice list, where in the photo is the damaged

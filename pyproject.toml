@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "bynn-decisionnode-mcp"
 version = "0.1.1"
-description = "The DecisionNode MCP server: calibrated yes-or-no, choice, scale, number, point and box judgments as tools for AI agents."
+description = "The DecisionNode MCP server: the decision engine's calibrated yes-or-no, choice, scale, number, point and box judgments as tools for AI agents."
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
 authors = [{ name = "Bynn Intelligence, Inc." }]
-keywords = ["decisionnode", "mcp", "model-context-protocol", "agents", "classification"]
+keywords = ["decisionnode", "decision-engine", "mcp", "model-context-protocol", "agents", "classification"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
