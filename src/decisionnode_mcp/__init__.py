@@ -2,7 +2,7 @@
 
 import warnings
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 # A dependency of FastMCP warns about its own deprecated modules on import, and turns its
 # warnings on when its warning module loads. The server does not use those modules, so
