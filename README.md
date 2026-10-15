@@ -223,10 +223,13 @@ item.
 
 `decide` takes `boosters`: specialist models that read the call's images before the
 model answers. Their readings are evidence the model weighs, and they come back in the
-result as `evidence`, one reading per picture. Up to 4 a call, each once: a name, or
-`{"name", "images", "require", "options"}` to read only some images, to fail the call
-when the booster fails (`"require": true`) or to set its options. Each picture a booster
-reads is billed as one booster call; a booster that fails or runs out of time is free.
+result as `evidence`: per booster its `version`, `status`, `latency_ms`, `billed_calls` and
+`results`, one reading per picture, exactly as the API sent them. Up to 4 a call, each
+once, in your order: a name, or `{"name", "images", "require", "options", "timeout_ms"}` to
+read only some images, to fail the call when the booster fails (`"require": true`), to set
+its options or to give it its own time budget. The names are free text, so a booster
+added to the API works without an update of this server. Each picture a booster reads is
+billed as one booster call; a booster that fails or runs out of time is free.
 
 | Booster | Reads | Options |
 |---|---|---|
@@ -321,7 +324,11 @@ A failed call is a tool result with `isError` true and the error as structured c
 
 `reason` is the API's explanation in words, so the agent can correct the call. A
 request refused under the usage policy has `error_type` `refusal_error` and its
-`category`. A 422 adds `entries`; a 429 or 529 adds `retry_after` in seconds.
+`category`. A 422 adds `entries`; a 429 or 529 adds `retry_after` in seconds. A call
+that named boosters adds `boosters`, what each one did (`status` and `latency_ms`, from
+the `x-decisionnode-boosters` header), so a required booster that failed (the 529
+`booster_unavailable`) shows which. A booster's refused setting is a 400
+`api_usage_error` whose `reason` names it, such as `"options": 'prompt' is required`.
 Temporary failures (408, 429, 5xx, timeouts, dropped connections) are retried twice
 before an error is reported; 400, 401, 402, 403, 404 and 422 are never retried.
 

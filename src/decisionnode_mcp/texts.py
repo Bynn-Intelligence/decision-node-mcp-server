@@ -261,7 +261,9 @@ one reading per picture. Up to 4 a call, each a name or `{"name", "images", "req
 "options"}`. Each picture a booster reads is billed as one booster call.
 
 - `age` reads the age of the person in a picture, `ai_generated` whether a picture was \
-made by a generator, and `ocr` the text a picture shows (option `prompt`).
+made by a generator, `face_detection` the faces and their boxes, `face_recognition` the \
+faces matched in a face collection (option `collection`), and `ocr` the text a picture \
+shows (option `prompt`).
 - `bynn_depth` (Depth Vision) gives meters to the nearest obstacle straight ahead \
 (`ahead`, the floor left out), in 7 directions from left to right, and as a grid \
 (option `grid_size`, 2 to 16).

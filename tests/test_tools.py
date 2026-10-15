@@ -474,6 +474,46 @@ async def test_decide_takes_at_most_four_boosters(local: Mock) -> None:
     assert local.requests() == []
 
 
+async def test_decide_passes_a_segment_vision_booster_through_unchanged(local: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    use_scenario(local, monkeypatch, evidence_scenario(local, "mcp-segment", {"pad": {"type": "truth", "truth": 0.88}}))
+    segment = {
+        "name": "bynn_segment",
+        "images": ["belt"],
+        "require": True,
+        "timeout_ms": 2000,
+        "options": {"prompt": ["orange H landing pad", "purple gate"], "max_instances": 4, "min_score": 0.3,
+                    "polygon_points": 12, "depth": False},
+    }
+    questions = {"pad": {"type": "truth", "instructions": "Is a landing pad in view?"}}
+    data = payload(await call("decide", {"questions": questions, "images": [BELT], "boosters": [segment, "face_detection"]}))
+    assert sent_body(local)["boosters"] == [segment, "face_detection"]
+    assert data["evidence"]["bynn_segment"]["billed_calls"] == 1
+    assert data["evidence"]["bynn_segment"]["results"] == [SEGMENT_READING]
+
+
+async def test_a_booster_refusal_reaches_the_caller_with_its_reason(local: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    reason = "\"options\": 'prompt' is required"
+    step = {"status": 400, "headers": {"x-decisionnode-error": reason},
+            "body": {"detail": {"error_type": "api_usage_error", "message": "Invalid request."}}}
+    use_scenario(local, monkeypatch, local.add_scenario({"name": "mcp-segment-no-prompt", "steps": [step], "after": "repeat_last"}))
+    result = await call("decide", {"questions": {"q": {"type": "truth", "instructions": "?"}}, "images": [BELT],
+                                   "boosters": [{"name": "bynn_segment"}]})
+    data = error_of(result)
+    assert data["status"] == 400 and data["error_type"] == "api_usage_error"
+    assert data["message"] == "Invalid request." and data["reason"] == reason
+    assert len(local.requests()) == 1  # a 400 is never retried
+
+
+async def test_a_required_booster_that_failed_names_its_status(local: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    step = {"status": 529, "headers": {"retry-after-ms": "1", "x-decisionnode-boosters": "bynn_depth=ok:41,bynn_segment=error:61"},
+            "body": {"detail": {"error_type": "booster_unavailable", "message": "The booster 'bynn_segment' failed."}}}
+    use_scenario(local, monkeypatch, local.add_scenario({"name": "mcp-segment-failed", "steps": [step], "after": "repeat_last"}))
+    boosters = ["bynn_depth", {"name": "bynn_segment", "require": True, "options": {"prompt": "purple gate"}}]
+    data = error_of(await call("decide", {"questions": {"q": {"type": "truth", "instructions": "?"}}, "images": [BELT], "boosters": boosters}))
+    assert data["status"] == 529 and data["error_type"] == "booster_unavailable"
+    assert data["boosters"] == {"bynn_depth": {"status": "ok", "latency_ms": 41}, "bynn_segment": {"status": "error", "latency_ms": 61}}
+
+
 async def test_decide_carries_the_cost_as_sent(local: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
     # usage.cost is passed through whole, never recomputed: here usd is
     # not the doubles' sum of its parts, which a client adding them would get wrong.

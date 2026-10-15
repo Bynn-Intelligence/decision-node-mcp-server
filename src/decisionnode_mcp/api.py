@@ -217,6 +217,12 @@ def error_payload(exc: DecisionNodeError) -> Dict[str, Any]:
         payload["entries"] = exc.entries
     if isinstance(exc, (RateLimitError, OverloadedError)) and exc.retry_after is not None:
         payload["retry_after"] = exc.retry_after
+    boosters = getattr(exc, "boosters", None)
+    if boosters:
+        # The x-decisionnode-boosters header: what each booster of the request did.
+        payload["boosters"] = {
+            name: {"status": entry.status, "latency_ms": entry.latency_ms} for name, entry in boosters.items()
+        }
     return payload
 
 

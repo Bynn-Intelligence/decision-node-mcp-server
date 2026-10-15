@@ -51,15 +51,22 @@ VIDEOS_DESCRIPTION = (
 
 BOOSTERS_DESCRIPTION = (
     "Specialist models that read the call's images before the model answers; their readings come back "
-    "as `evidence`. Up to 4, each once: a booster name, or {name, images, require, options} to read only "
-    "some images, fail the call when the booster fails (`require: true`) or set its options. Among them: "
-    "`age` (the age of the person in a picture), `ai_generated` (whether a picture was made by a "
-    "generator), `ocr` (the text a picture shows; option `prompt`), `bynn_depth` (Depth Vision: meters "
-    "to the nearest obstacle straight ahead, in 7 directions and as a grid; option `grid_size`, 2 to 16) "
-    "and `bynn_segment` (Segment Vision: the outline, box and centre of what you name, and its distance "
-    "and size in meters; option `prompt`, required, one phrase or a list of 1 to 4, where descriptive "
-    "phrases match better). Each picture a booster reads is billed as one booster call. Distances are "
-    "estimates from one picture, for decisions and planning, never a safety stop."
+    "as `evidence`. Up to 4, each once, in your order: a booster name, or {name, images, require, "
+    "options, timeout_ms} to read only some images, fail the call when the booster fails "
+    "(`require: true`), set its options or its time budget. The names are free text, so a new booster "
+    "works without an update. The boosters: `age` (the age of the person in a picture), `ai_generated` "
+    "(whether a picture was made by a generator), `face_detection` (the faces in a picture and their "
+    "boxes), `face_recognition` (faces matched in a face collection; options `collection`, required, "
+    "and `threshold`), `ocr` (the text a picture shows; option `prompt`), `bynn_depth` (Depth Vision: "
+    "meters to the nearest obstacle straight ahead, the floor left out, in 7 directions from left to "
+    "right and as a grid; option `grid_size`, 2 to 16, default 8) and `bynn_segment` (Segment Vision: "
+    "each match of what you name, with its label, score, box, outline, centre, the opening of a gate or "
+    "doorway, and with depth on its distance and size in meters; options `prompt`, required, one "
+    "phrase as a string or 1 to 4 as an array, each at most 120 characters, `max_instances` 1 to 16 "
+    "(8), `min_score` 0 to 1 (0.25), `polygon_points` 3 to 64 (24) and `depth` (true); coordinates "
+    "are fractions from the top left, and descriptive phrases match better). Each picture a booster "
+    "reads is billed as one booster call. Distances are estimates from one picture, for decisions and "
+    "planning, never a safety stop."
 )
 
 # The API also takes `noul`, an older name of the yes-or-no type. A question sent with it is
@@ -189,9 +196,14 @@ class BoosterInput(BaseModel):
     options: Optional[Dict[str, Any]] = Field(
         default=None,
         description=(
-            "The booster's settings: `ocr` {prompt}; `bynn_depth` {grid_size}; `bynn_segment` {prompt, "
-            "max_instances, min_score, polygon_points, depth}. A booster without settings takes none."
+            "The booster's settings: `face_recognition` {collection, threshold}; `ocr` {prompt}; "
+            "`bynn_depth` {grid_size}; `bynn_segment` {prompt, max_instances, min_score, polygon_points, "
+            "depth}. A booster without settings takes none; the API refuses a setting it does not know."
         ),
+    )
+    timeout_ms: Optional[int] = Field(
+        default=None,
+        description="This booster's time budget in milliseconds, within the booster's own maximum. Left out: its default.",
     )
 
     def wire(self) -> Dict[str, Any]:
