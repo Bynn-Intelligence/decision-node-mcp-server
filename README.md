@@ -235,6 +235,8 @@ billed as one booster call; a booster that fails or runs out of time is free.
 |---|---|---|
 | `age` | The age of the person in a picture | none |
 | `ai_generated` | Whether a picture was made by a generator | none |
+| `face_detection` | The faces in a picture: `faces` (how many) and `detections`, a `box` and a `confidence` per face | none |
+| `face_recognition` | The faces in a picture matched against a collection: per match a `box`, a `score`, the `collection` and the item's `reference`, with your `label` or a public figure's `name` | `collection` (required: `celebrities`, or the id of one of your workspace's face collections), `threshold` 0 to 1 (0.5) |
 | `ocr` | The text a picture shows | `prompt` |
 | `bynn_depth` (Depth Vision) | Distances in meters: `ahead` (the nearest obstacle straight ahead, the floor left out, or `null`), `directions` (7, left to right), `ground`, and a `grid` with `depth_min`, `depth_max` and `depth_median` | `grid_size`, 2 to 16 (8) |
 | `bynn_segment` (Segment Vision) | What `prompt` names: per match `label`, `score`, `box`, `polygon`, `area`, `centroid`, `opening` (the hole of a gate, doorway or ring, or `null`), and with depth on its `depth` and `size_m` in meters | `prompt` (required: one phrase, or a list of 1 to 4 of at most 120 characters), `max_instances` 1 to 16 (8), `min_score` 0 to 1 (0.25), `polygon_points` 3 to 64 (24), `depth` (true) |
