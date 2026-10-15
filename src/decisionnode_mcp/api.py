@@ -578,6 +578,7 @@ async def decide(
     images: Optional[List[Any]],
     model: Optional[str],
     videos: Optional[List[Dict[str, Any]]] = None,
+    boosters: Optional[List[Any]] = None,
 ) -> Decision:
     """One decide request.
 
@@ -588,6 +589,8 @@ async def decide(
     the result and every error are what decide() would give.
     """
     if not videos and not has_places(questions):
+        if boosters:
+            return await dn.decide(state, questions, images, model, boosters=boosters)
         return await dn.decide(state, questions, images, model)
     body: Dict[str, Any] = {
         "model": model or dn.model,
@@ -598,6 +601,8 @@ async def decide(
         body["images"] = [img.to_dict() if isinstance(img, Image) else dict(img) for img in images]
     if videos:
         body["videos"] = videos
+    if boosters:
+        body["boosters"] = boosters
     status, headers, text = await dn._send("POST", sdk_base.DECIDE_PATH, sdk_base.encode(body))
     return parse_decision(sdk_base.parse_json(status, headers, text), headers)
 
@@ -627,6 +632,14 @@ def with_safety(result: Dict[str, Any], decision: Decision) -> Dict[str, Any]:
     """Add `safety` only when the hosted check flagged a category, so ordinary results stay short."""
     if decision.safety is not None and decision.safety.flagged:
         result["safety"] = decision.safety.to_dict()
+    return result
+
+
+def with_evidence(result: Dict[str, Any], decision: Decision) -> Dict[str, Any]:
+    """Add the boosters' `evidence` exactly as the API sent it, when the call named boosters."""
+    evidence = decision.raw.get("evidence") if isinstance(decision.raw, Mapping) else None
+    if isinstance(evidence, Mapping):
+        result["evidence"] = dict(evidence)
     return result
 
 

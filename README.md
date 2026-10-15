@@ -93,7 +93,7 @@ structured content, and as the same JSON in a text block.
 | `number` | Ask for a count or a quantity within a range | `{"number", "expected", "confidence", "probabilities", "cost"}` | A request |
 | `point` | Find one spot in an image | `{"x", "y", "present", "confidence", "image", "width", "height", "cost"}` | A request |
 | `box` | Draw a box around one thing in an image | `{"x1", "y1", "x2", "y2", "present", "confidence", "image", "width", "height", "cost"}` | A request |
-| `decide` | Ask several questions of any type about one state | `{"answers": {id: answer}, "model", "input_tokens", "cost"}` | One request |
+| `decide` | Ask several questions of any type about one state, with boosters if you like | `{"answers": {id: answer}, "model", "input_tokens", "cost"}`, and `evidence` with boosters | One request, plus one booster call per picture a booster reads |
 | `decide_many` | Ask the same questions about many states (1 to 50 items) | `{"results": {item id: {"answers", "cost"} or {"error"}}, "input_tokens"}` | One request per item |
 | `decide_video` | Ask questions of any type about videos sent as frames | `{"answers", "model", "input_tokens", "cost", "video_frames", "video_seconds"}`, and `warnings` | One request |
 | `models` | List the models the key may use, with their limits | `{"models": [...]}` | Nothing |
@@ -107,7 +107,7 @@ Inputs:
 | `score` | `instructions`, `levels` (lowest first), `state`, `images`, `model` |
 | `number` | `instructions`, `min`, `max`, `step`, `state`, `images`, `model` |
 | `point`, `box` | `instructions`, `images` (at least one), `image`, `units`, `state`, `model` |
-| `decide` | `questions` (id to `{type, instructions, criteria}`, `{type, instructions, min, max, step}` for a number, or `{type, instructions, image, units}` for a point or a box, as the API takes them), `state`, `images`, `model` |
+| `decide` | `questions` (id to `{type, instructions, criteria}`, `{type, instructions, min, max, step}` for a number, or `{type, instructions, image, units}` for a point or a box, as the API takes them), `state`, `images`, `boosters`, `model` |
 | `decide_many` | `items` (a list of `{id, state, images}`, `images` optional and each item's own), `questions`, `model` |
 | `decide_video` | `questions`, `videos`, `state`, `images`, `model` |
 
@@ -218,6 +218,48 @@ the belt), the answer is the best match; the instructions can say which one ("th
 leftmost yellow package"). Point and box questions mix with the other types in
 `decide`, and in `decide_many` each item can carry its own images, such as one photo per
 item.
+
+## Boosters
+
+`decide` takes `boosters`: specialist models that read the call's images before the
+model answers. Their readings are evidence the model weighs, and they come back in the
+result as `evidence`, one reading per picture. Up to 4 a call, each once: a name, or
+`{"name", "images", "require", "options"}` to read only some images, to fail the call
+when the booster fails (`"require": true`) or to set its options. Each picture a booster
+reads is billed as one booster call; a booster that fails or runs out of time is free.
+
+| Booster | Reads | Options |
+|---|---|---|
+| `age` | The age of the person in a picture | none |
+| `ai_generated` | Whether a picture was made by a generator | none |
+| `ocr` | The text a picture shows | `prompt` |
+| `bynn_depth` (Depth Vision) | Distances in meters: `ahead` (the nearest obstacle straight ahead, the floor left out, or `null`), `directions` (7, left to right), `ground`, and a `grid` with `depth_min`, `depth_max` and `depth_median` | `grid_size`, 2 to 16 (8) |
+| `bynn_segment` (Segment Vision) | What `prompt` names: per match `label`, `score`, `box`, `polygon`, `area`, `centroid`, `opening` (the hole of a gate, doorway or ring, or `null`), and with depth on its `depth` and `size_m` in meters | `prompt` (required: one phrase, or a list of 1 to 4 of at most 120 characters), `max_instances` 1 to 16 (8), `min_score` 0 to 1 (0.25), `polygon_points` 3 to 64 (24), `depth` (true) |
+
+Depth Vision and Segment Vision are made for robots and drones. Segment Vision's
+coordinates are fractions of the picture from its top left, and descriptive phrases
+("orange H landing pad", "purple octagonal frame on a pole") match better than a single
+word. Their distances and sizes are estimates from one picture, for decisions and
+planning, never a safety stop: a robot or a drone uses stereo cameras or LiDAR for that.
+
+```json
+{
+  "state": "Drone at 1.5 m, heading to the next gate of the course.",
+  "images": [{"id": "front", "path": "~/frames/front.jpg"}],
+  "boosters": [
+    {"name": "bynn_depth", "options": {"grid_size": 8}},
+    {"name": "bynn_segment", "options": {"prompt": ["purple gate", "orange H landing pad"]}}
+  ],
+  "questions": {
+    "clear": {"type": "truth", "instructions": "Is the path straight ahead clear for at least 2 meters?"},
+    "gate": {"type": "point", "instructions": "The centre of the opening of the purple gate.", "image": "front"}
+  }
+}
+```
+
+Ask the question your code acts on and read its answer; the readings in `evidence` are
+there to check and log. Every booster DecisionNode offers is listed at
+[decisionnode.com/docs/concepts/boosters](https://decisionnode.com/docs/concepts/boosters).
 
 ## Video (frames)
 

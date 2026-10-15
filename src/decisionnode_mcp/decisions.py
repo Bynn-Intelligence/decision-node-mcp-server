@@ -10,7 +10,16 @@ from fastmcp.tools.tool import ToolResult
 from pydantic import Field
 
 from . import api, schemas, texts
-from .schemas import IMAGES_DESCRIPTION, MODEL_DESCRIPTION, STATE_DESCRIPTION, ImageInput, ItemInput, QuestionInput
+from .schemas import (
+    BOOSTERS_DESCRIPTION,
+    IMAGES_DESCRIPTION,
+    MODEL_DESCRIPTION,
+    STATE_DESCRIPTION,
+    BoosterEntry,
+    ImageInput,
+    ItemInput,
+    QuestionInput,
+)
 
 mcp = FastMCP("DecisionNode decisions")
 
@@ -45,19 +54,21 @@ async def decide(
     questions: Questions,
     state: Annotated[Any, Field(description=STATE_DESCRIPTION)] = None,
     images: Annotated[Optional[List[ImageInput]], Field(description=IMAGES_DESCRIPTION)] = None,
+    boosters: Annotated[Optional[List[BoosterEntry]], Field(max_length=4, description=BOOSTERS_DESCRIPTION)] = None,
     model: Annotated[Optional[str], Field(description=MODEL_DESCRIPTION)] = None,
 ) -> ToolResult:
     async def call() -> Dict[str, Any]:
         sdk_images = api.images_for_api([i.model_dump() for i in images] if images else None)
         wire = {qid: q.wire() for qid, q in questions.items()}
+        booster_wire = [b if isinstance(b, str) else b.wire() for b in boosters] if boosters else None
         async with api.client() as dn:
-            decision = await api.decide(dn, state, wire, sdk_images, model)
+            decision = await api.decide(dn, state, wire, sdk_images, model, boosters=booster_wire)
         result = {
             "answers": _answers(decision),
             "model": decision.model,
             "input_tokens": decision.usage.input_tokens,
         }
-        return api.with_safety(api.with_cost(result, decision), decision)
+        return api.with_safety(api.with_cost(api.with_evidence(result, decision), decision), decision)
 
     return await api.run(call)
 

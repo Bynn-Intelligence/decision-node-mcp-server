@@ -92,7 +92,10 @@ DECIDE_DESCRIPTION = (
     "example a route, an urgency and an escalation flag for one ticket. Returns `answers` by "
     "question id, with the `model` that answered, the `input_tokens` counted and the call's "
     "`cost` in USD. A point or box question with `max` (2 to 16) finds every match, up to that "
-    "many, such as each car in a picture. Costs one request, with the state counted once. " + FLASH_NOTE
+    "many, such as each car in a picture. Costs one request, with the state counted once. With "
+    "`boosters`, specialist models read the images first and their readings come back as `evidence`, "
+    "such as `bynn_depth` for distances in meters and `bynn_segment` to find what you name, with its "
+    "outline and size; each picture a booster reads is billed as one booster call. " + FLASH_NOTE
 )
 
 DECIDE_MANY_DESCRIPTION = (
@@ -249,6 +252,26 @@ a second for an incident such as a fall or smoke, about two a second for countin
 passes. The API publishes its video limits in `models`.
 - A result carries `video_frames` and `video_seconds`, what the API read, and `warnings` \
 when it read fewer frames or a smaller size than sent.
+
+## Boosters
+
+`decide` takes `boosters`: specialist models that read the images before the model \
+answers. Their readings are evidence the model weighs, and they come back as `evidence`, \
+one reading per picture. Up to 4 a call, each a name or `{"name", "images", "require", \
+"options"}`. Each picture a booster reads is billed as one booster call.
+
+- `age` reads the age of the person in a picture, `ai_generated` whether a picture was \
+made by a generator, and `ocr` the text a picture shows (option `prompt`).
+- `bynn_depth` (Depth Vision) gives meters to the nearest obstacle straight ahead \
+(`ahead`, the floor left out), in 7 directions from left to right, and as a grid \
+(option `grid_size`, 2 to 16).
+- `bynn_segment` (Segment Vision) finds what `prompt` names, one phrase or a list of 1 to \
+4: each match's `label`, `score`, `box`, `polygon`, `centroid`, the `opening` of a gate or \
+doorway, and with depth on its distance and size in meters. Coordinates are fractions \
+from the top left. Descriptive phrases ("orange H landing pad") match better.
+- Distances are estimates from one picture, for decisions and planning, never a safety \
+stop. Ask the question you need ("Is the path ahead clear for 2 meters?") and read the \
+answer, not only the reading.
 
 ## Limits and errors
 

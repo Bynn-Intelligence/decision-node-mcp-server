@@ -49,6 +49,19 @@ VIDEOS_DESCRIPTION = (
     "is limited to about 3 MiB in total."
 )
 
+BOOSTERS_DESCRIPTION = (
+    "Specialist models that read the call's images before the model answers; their readings come back "
+    "as `evidence`. Up to 4, each once: a booster name, or {name, images, require, options} to read only "
+    "some images, fail the call when the booster fails (`require: true`) or set its options. Among them: "
+    "`age` (the age of the person in a picture), `ai_generated` (whether a picture was made by a "
+    "generator), `ocr` (the text a picture shows; option `prompt`), `bynn_depth` (Depth Vision: meters "
+    "to the nearest obstacle straight ahead, in 7 directions and as a grid; option `grid_size`, 2 to 16) "
+    "and `bynn_segment` (Segment Vision: the outline, box and centre of what you name, and its distance "
+    "and size in meters; option `prompt`, required, one phrase or a list of 1 to 4, where descriptive "
+    "phrases match better). Each picture a booster reads is billed as one booster call. Distances are "
+    "estimates from one picture, for decisions and planning, never a safety stop."
+)
+
 # The API also takes `noul`, an older name of the yes-or-no type. A question sent with it is
 # accepted and asked as `truth`, so its answer comes back under the current name.
 LEGACY_TRUTH = "noul"
@@ -158,6 +171,34 @@ class ItemInput(BaseModel):
             "limited to about 3 MiB."
         ),
     )
+
+
+class BoosterInput(BaseModel):
+    """A booster with settings, in the API's form."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(description="The booster's name, such as `bynn_depth`.")
+    images: Optional[List[str]] = Field(
+        default=None, description="The ids of the images it reads. Left out: every image of the call."
+    )
+    require: Optional[bool] = Field(
+        default=None,
+        description="true: the call fails when this booster fails or runs out of time. Otherwise the answer comes without its reading.",
+    )
+    options: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "The booster's settings: `ocr` {prompt}; `bynn_depth` {grid_size}; `bynn_segment` {prompt, "
+            "max_instances, min_score, polygon_points, depth}. A booster without settings takes none."
+        ),
+    )
+
+    def wire(self) -> Dict[str, Any]:
+        return {k: v for k, v in self.model_dump().items() if v is not None}
+
+
+BoosterEntry = Union[str, BoosterInput]
 
 
 class FrameInput(BaseModel):
@@ -370,12 +411,23 @@ ANSWERS_SCHEMA: Dict[str, Any] = {
     "additionalProperties": {"type": "object"},
 }
 
+EVIDENCE_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "description": (
+        "Present when the call named boosters: booster name to its `version`, `status` (`ok`, `timeout`, "
+        "`error` or `skipped`), `latency_ms`, `billed_calls` and `results`, one reading per picture as the "
+        "API sent it."
+    ),
+    "additionalProperties": True,
+}
+
 DECIDE_OUTPUT: Dict[str, Any] = {
     "type": "object",
     "properties": {
         "answers": ANSWERS_SCHEMA,
         "model": {"type": ["string", "null"], "description": "The model version that answered."},
         "input_tokens": {"type": ["integer", "null"]},
+        "evidence": EVIDENCE_SCHEMA,
         "cost": COST_SCHEMA,
         "safety": SAFETY_SCHEMA,
     },

@@ -405,6 +405,75 @@ async def test_decide_several_places(local: Mock) -> None:
     assert len(answer["boxes"]) == answer["count"] <= 8
 
 
+DEPTH_READING = {
+    "image": "belt", "ahead": 3.21, "directions": [5.12, 4.03, None, 2.81, 6.02, 7.15, 9.33], "ground": True,
+    "grid_rows": 2, "grid_cols": 2, "grid": [[9.1, 8.7], [3.4, 2.9]], "depth_min": 1.01, "depth_max": 14.98,
+    "depth_median": 4.37, "width": 1920, "height": 1080,
+}
+SEGMENT_READING = {
+    "image": "belt", "width": 1920, "height": 1080, "prompts": ["purple gate"],
+    "instances": [{
+        "label": "purple gate", "score": 0.91, "box": [0.31, 0.22, 0.58, 0.81],
+        "polygon": [[0.31, 0.22], [0.58, 0.22], [0.58, 0.81]], "area": 0.12, "centroid": [0.45, 0.47],
+        "opening": None, "depth": {"median": 4.2, "opening_median": None, "opening_rim_median": None},
+        "size_m": {"width": 1.6, "height": 2.1, "opening": None},
+    }],
+    "depth_source": "bynn_depth", "assumed_hfov_deg": 65,
+}
+EVIDENCE = {
+    "bynn_depth": {"version": "bynn_depth-v1", "status": "ok", "latency_ms": 41, "billed_calls": 1, "results": [DEPTH_READING]},
+    "bynn_segment": {"version": "bynn_segment-v1", "status": "ok", "latency_ms": 88, "billed_calls": 1, "results": [SEGMENT_READING]},
+}
+
+
+def evidence_scenario(mock: Mock, name: str, answers: Dict[str, Any]) -> str:
+    body = {"model": "decisionnode-moe-0.9.0-rc1", "answers": answers, "evidence": EVIDENCE,
+            "usage": {"input_tokens": 512, "output_tokens": 0, "booster_tokens": 180, "boosters": 2}}
+    return mock.add_scenario({"name": name, "steps": [{"status": 200, "body": body}], "after": "repeat_last"})
+
+
+async def test_decide_sends_boosters_as_given_and_returns_their_evidence(local: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    use_scenario(local, monkeypatch, evidence_scenario(local, "mcp-boosters", {"clear": {"type": "truth", "truth": 0.12}}))
+    boosters = [
+        "age",
+        {"name": "bynn_depth", "options": {"grid_size": 2}},
+        {"name": "bynn_segment", "images": ["belt"], "require": True, "options": {"prompt": ["purple gate"], "depth": True}},
+    ]
+    questions = {"clear": {"type": "truth", "instructions": "Is the path straight ahead clear for 2 meters?"}}
+    data = payload(await call("decide", {"questions": questions, "images": [BELT], "boosters": boosters}))
+    assert sent_body(local)["boosters"] == boosters
+    assert data["evidence"] == EVIDENCE
+    assert data["answers"]["clear"]["truth"] == 0.12
+
+
+async def test_decide_with_a_place_question_sends_its_boosters(local: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    use_scenario(local, monkeypatch, evidence_scenario(local, "mcp-boosters-place", {"gate": dict(POINT, type="point")}))
+    boosters = [{"name": "bynn_segment", "options": {"prompt": "purple gate"}}]
+    data = payload(await call("decide", {"questions": {"gate": {"type": "point", "instructions": "the gate"}}, "images": [BELT], "boosters": boosters}))
+    assert sent_body(local)["boosters"] == boosters
+    assert data["evidence"]["bynn_segment"]["results"] == [SEGMENT_READING]
+
+
+async def test_decide_with_a_booster_against_the_mock(local: Mock) -> None:
+    questions = {"adult": {"type": "truth", "instructions": "Is the person an adult?"}}
+    data = payload(await call("decide", {"questions": questions, "images": [BELT], "boosters": ["age"]}))
+    assert sent_body(local)["boosters"] == ["age"]
+    assert data["evidence"]["age"]["status"] == "ok"
+    assert [r["image"] for r in data["evidence"]["age"]["results"]] == ["belt"]
+
+
+async def test_decide_without_boosters_has_no_evidence(local: Mock) -> None:
+    data = payload(await call("decide", {"questions": {"q": {"type": "truth", "instructions": "?"}}}))
+    assert "boosters" not in sent_body(local)
+    assert "evidence" not in data
+
+
+async def test_decide_takes_at_most_four_boosters(local: Mock) -> None:
+    result = await call("decide", {"questions": {"q": {"type": "truth", "instructions": "?"}}, "boosters": ["a", "b", "c", "d", "e"]})
+    assert result.is_error
+    assert local.requests() == []
+
+
 async def test_decide_carries_the_cost_as_sent(local: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
     # usage.cost is passed through whole, never recomputed: here usd is
     # not the doubles' sum of its parts, which a client adding them would get wrong.
